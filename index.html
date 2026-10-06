@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Presensi & Daftar Kehadiran Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-200">
+                    <i class="fa-solid me-0 fa-clipboard-user text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-900 text-lg leading-tight">PresensiDigital</h1>
+                    <p class="text-xs text-slate-500">Sistem Kehadiran & Verifikasi Foto</p>
+                </div>
+            </div>
+
+            <!-- Role Selector & Status Badge -->
+            <div class="flex items-center gap-2 sm:gap-4">
+                <div id="liveClock" class="hidden md:block text-right pr-4 border-r border-slate-200 text-xs text-slate-500 font-medium">
+                    <div id="clockTime" class="text-sm font-semibold text-slate-700">00:00:00 WIB</div>
+                    <div id="clockDate">Selasa, 6 Okt 2026</div>
+                </div>
+
+                <div class="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-semibold">
+                    <button id="btnRolePeserta" onclick="switchRole('peserta')" class="px-3 py-1.5 rounded-lg transition-all duration-200 bg-white text-sky-700 shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-user"></i> Mode Peserta
+                    </button>
+                    <button id="btnRoleAdmin" onclick="switchRole('admin')" class="px-3 py-1.5 rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield"></i> Mode Admin
+                        <span id="badgeAdminCount" class="ml-1 bg-sky-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+        
+        <!-- SECTION 1: MODE PESERTA (FORM CHECK-IN) -->
+        <section id="pesertaSection" class="max-w-2xl mx-auto transition-all duration-300">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
+                <!-- Form Header -->
+                <div class="bg-gradient-to-r from-sky-600 to-indigo-600 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium backdrop-blur-sm">
+                                <i class="fa-solid fa-circle-check text-emerald-300 mr-1"></i> Form Kehadiran
+                            </span>
+                            <h2 class="text-2xl font-bold mt-2">Daftar Kehadiran Peserta</h2>
+                            <p class="text-sky-100 text-sm mt-1">Isi identitas dan unggah foto selfie/kehadiran Anda.</p>
+                        </div>
+                        <i class="fa-solid fa-camera-retro text-5xl text-white/20 hidden sm:block"></i>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form id="attendanceForm" onsubmit="handleAttendanceSubmit(event)" class="p-6 sm:p-8 space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                Nama Lengkap <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                    <i class="fa-regular fa-user"></i>
+                                </span>
+                                <input type="text" id="inputNama" required placeholder="Contoh: Budi Santoso"
+                                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                Nomor Induk / NIP / ID <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                    <i class="fa-solid fa-id-card"></i>
+                                </span>
+                                <input type="text" id="inputNip" required placeholder="Contoh: 198203102"
+                                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                Divisi / Departemen / Instansi
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                    <i class="fa-solid fa-building"></i>
+                                </span>
+                                <input type="text" id="inputDivisi" placeholder="Contoh: IT / Marketing / Umum"
+                                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                Status Kehadiran <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                    <i class="fa-solid fa-clipboard-check"></i>
+                                </span>
+                                <select id="inputStatus" required class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all text-sm appearance-none">
+                                    <option value="Hadir">Hadir (On-site / Online)</option>
+                                    <option value="Izin">Izin</option>
+                                    <option value="Sakit">Sakit</option>
+                                    <option value="Dinas Luar">Dinas Luar / Tugas</option>
+                                </select>
+                                <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Unggah Foto Kehadiran / Selfie <span class="text-rose-500">*</span>
+                        </label>
+                        <p class="text-xs text-slate-500 mb-3">Ambil foto langsung atau ambil berkas gambar dari perangkat Anda.</p>
+                        
+                        <div id="uploadBox" class="border-2 border-dashed border-slate-300 rounded-2xl p-5 text-center bg-slate-50 hover:bg-slate-100/70 transition-all cursor-pointer relative group">
+                            <input type="file" id="inputFoto" accept="image/*" capture="environment" onchange="previewImage(event)" class="hidden">
+                            
+                            <!-- Default State -->
+                            <div id="uploadPrompt" class="space-y-3" onclick="document.getElementById('inputFoto').click()">
+                                <div class="w-14 h-14 mx-auto rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-camera"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-700">Klik di sini untuk <span class="text-sky-600">Unggah Foto</span></p>
+                                    <p class="text-xs text-slate-400 mt-1">PNG, JPG, JPEG (Maks. 5 MB)</p>
+                                </div>
+                                <div class="flex justify-center gap-2 pt-1">
+                                    <button type="button" onclick="event.stopPropagation(); startWebcam()" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 shadow-sm flex items-center gap-1.5">
+                                        <i class="fa-solid fa-video text-sky-600"></i> Buka Kamera
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Preview State -->
+                            <div id="previewContainer" class="hidden relative max-w-xs mx-auto">
+                                <img id="imagePreview" src="" alt="Pratinjau Foto" class="w-full h-56 object-cover rounded-xl shadow-md border border-slate-200">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 rounded-xl transition-opacity flex items-center justify-center gap-2">
+                                    <button type="button" onclick="document.getElementById('inputFoto').click()" class="p-2 bg-white rounded-full text-slate-800 hover:bg-sky-50 shadow text-xs font-semibold flex items-center gap-1 px-3">
+                                        <i class="fa-solid fa-arrows-rotate"></i> Ganti
+                                    </button>
+                                    <button type="button" onclick="removeImage(event)" class="p-2 bg-rose-600 text-white rounded-full hover:bg-rose-700 shadow text-xs font-semibold flex items-center gap-1 px-3">
+                                        <i class="fa-solid fa-trash"></i> Hapus
+                                    </button>
+                                </div>
+                                <div class="mt-2 text-xs font-medium text-emerald-600 flex items-center justify-center gap-1">
+                                    <i class="fa-solid fa-circle-check"></i> Foto berhasil terpasang
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Catatan / Keterangan Tambahan
+                        </label>
+                        <textarea id="inputCatatan" rows="2" placeholder="Masukkan lokasi, kegiatan, atau alasan jika izin/sakit..."
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all text-sm"></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="btnSubmit" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 active:scale-[0.99] text-white font-bold rounded-xl shadow-lg shadow-sky-600/30 transition-all flex items-center justify-center gap-2 text-base">
+                        <i class="fa-solid fa-paper-plane"></i> Kirim Presensi Sekarang
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- SECTION 2: MODE ADMIN (DASHBOARD & HAFALAN/Daftar Foto) -->
+        <section id="adminSection" class="hidden space-y-6 transition-all duration-300">
+            
+            <!-- Header Info & Controls -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Panel Admin</span>
+                        <span class="text-slate-400 text-sm">•</span>
+                        <span class="text-slate-500 text-xs" id="totalRecordsText">Total 0 Data Kehadiran</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900 mt-1">Daftar Kehadiran & Verifikasi Foto</h2>
+                    <p class="text-slate-500 text-sm">Pantau presensi peserta dan verifikasi foto bukti kehadiran secara langsung.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold rounded-xl text-xs flex items-center gap-2 transition-all">
+                        <i class="fa-solid fa-file-excel"></i> Ekspor CSV / Excel
+                    </button>
+                    <button onclick="clearAllDataConfirm()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-trash-can"></i> Hapus Semua
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Total Peserta</p>
+                        <p id="statTotal" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Hadir</p>
+                        <p id="statHadir" class="text-2xl font-bold text-emerald-600">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-user-clock"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Izin / Sakit</p>
+                        <p id="statIzin" class="text-2xl font-bold text-amber-600">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-image"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Foto Terlampir</p>
+                        <p id="statFoto" class="text-2xl font-bold text-indigo-600">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filters -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="relative w-full sm:w-80">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="searchInput" onkeyup="renderAdminData()" placeholder="Cari nama peserta / NIP / divisi..."
+                        class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                    <span class="text-xs text-slate-400 font-semibold mr-1">Filter:</span>
+                    <button onclick="setFilterStatus('All')" id="filterBtnAll" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow-sm">Semua</button>
+                    <button onclick="setFilterStatus('Hadir')" id="filterBtnHadir" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Hadir</button>
+                    <button onclick="setFilterStatus('Izin')" id="filterBtnIzin" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Izin/Sakit</button>
+                    
+                    <div class="h-4 w-px bg-slate-200 mx-1"></div>
+
+                    <!-- View Switcher -->
+                    <div class="bg-slate-100 p-1 rounded-lg flex items-center">
+                        <button onclick="switchViewMode('grid')" id="btnViewGrid" title="Tampilan Kartu Foto" class="p-1.5 rounded-md bg-white text-sky-600 shadow-sm">
+                            <i class="fa-solid fa-border-all"></i>
+                        </button>
+                        <button onclick="switchViewMode('table')" id="btnViewTable" title="Tampilan Tabel Data" class="p-1.5 rounded-md text-slate-500 hover:text-slate-800">
+                            <i class="fa-solid fa-table-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRID VIEW (FOTO CARDS) -->
+            <div id="gridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Cards will be populated dynamically -->
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="tableContainer" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 uppercase font-bold tracking-wider">
+                            <tr>
+                                <th class="px-4 py-3.5">Peserta</th>
+                                <th class="px-4 py-3.5">NIP / ID</th>
+                                <th class="px-4 py-3.5">Divisi</th>
+                                <th class="px-4 py-3.5">Waktu Kehadiran</th>
+                                <th class="px-4 py-3.5">Status</th>
+                                <th class="px-4 py-3.5">Foto Bukti</th>
+                                <th class="px-4 py-3.5 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100">
+                            <!-- Table rows dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden bg-white rounded-2xl p-12 text-center border border-slate-200">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-3">
+                    <i class="fa-solid fa-inbox"></i>
+                </div>
+                <h3 class="font-bold text-slate-800 text-base">Belum Ada Data Kehadiran</h3>
+                <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Peserta yang mengisi form kehadiran akan muncul di daftar ini beserta foto selfie presensinya.</p>
+                <button onclick="switchRole('peserta')" class="mt-4 px-4 py-2 bg-sky-600 text-white rounded-xl text-xs font-semibold shadow-md hover:bg-sky-700 transition-all">
+                    + Isi Presensi Sekarang
+                </button>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- MODAL 1: WEBCAM CAPTURE -->
+    <div id="webcamModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-video text-sky-400"></i> Ambil Foto Kehadiran
+                </h3>
+                <button onclick="closeWebcam()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-950 flex flex-col items-center">
+                <div class="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-slate-800">
+                    <video id="webcamVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <canvas id="webcamCanvas" class="hidden"></canvas>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeWebcam()" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                <button onclick="captureWebcam()" class="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold hover:bg-sky-700 shadow-md flex items-center gap-1.5">
+                    <i class="fa-solid fa-camera"></i> Jepret Foto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: FOTO LIGHTBOX / ZOOM -->
+    <div id="photoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" onclick="closePhotoModal()">
+        <div class="max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl relative" onclick="event.stopPropagation()">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <div id="modalPhotoHeader">
+                    <h3 id="modalPhotoTitle" class="font-bold text-sm">Pratinjau Foto Kehadiran</h3>
+                    <p id="modalPhotoSub" class="text-xs text-slate-400"></p>
+                </div>
+                <button onclick="closePhotoModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-2 bg-slate-950 flex items-center justify-center min-h-[300px]">
+                <img id="modalPhotoImage" src="" alt="Foto Peserta Full" class="max-h-[70vh] w-auto object-contain rounded-lg">
+            </div>
+            <div id="modalPhotoFooter" class="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-600">
+                <p id="modalPhotoNotes" class="italic text-slate-500"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CUSTOM NOTIFICATION / ALERT -->
+    <div id="alertModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div id="alertIcon" class="w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-4">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 id="alertTitle" class="font-bold text-slate-900 text-lg">Presensi Berhasil!</h3>
+            <p id="alertMessage" class="text-xs text-slate-500 mt-2">Data kehadiran Anda telah tercatat secara otomatis.</p>
+            <button onclick="closeAlertModal()" class="mt-6 w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all shadow-md">
+                Mengerti & Tutup
+            </button>
+        </div>
+    </div>
+
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-8">
+        <p>&copy; 2026 PresensiDigital — Sistem Kehadiran Berbasis Foto & Verifikasi Realtime</p>
+    </footer>
+
+    <script>
+        // State Management
+        let currentRole = 'peserta'; // 'peserta' or 'admin'
+        let currentViewMode = 'grid'; // 'grid' or 'table'
+        let currentFilterStatus = 'All'; // 'All', 'Hadir', 'Izin'
+        let currentPhotoBase64 = null;
+        let webcamStream = null;
+
+        // Sample Data Initializer
+        let attendanceList = [
+            {
+                id: 'PRE-1001',
+                nama: 'Ahmad Fauzi',
+                nip: '199302142',
+                divisi: 'Teknologi Informasi',
+                status: 'Hadir',
+                waktu: '06 Okt 2026, 07:45 WIB',
+                foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80',
+                catatan: 'Hadir di kantor pusat tepat waktu. Ruang Meeting A.'
+            },
+            {
+                id: 'PRE-1002',
+                nama: 'Siti Rahmawati',
+                nip: '199508210',
+                divisi: 'Human Resources',
+                status: 'Hadir',
+                waktu: '06 Okt 2026, 08:02 WIB',
+                foto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=500&auto=format&fit=crop&q=80',
+                catatan: 'WFH - Selesai meeting vendor jam 8 pagi.'
+            },
+            {
+                id: 'PRE-1003',
+                nama: 'Dodi Hermawan',
+                nip: '198811051',
+                divisi: 'Keuangan',
+                status: 'Sakit',
+                waktu: '06 Okt 2026, 08:15 WIB',
+                foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+                catatan: 'Melampirkan surat keterangan dokter dari RS Medika.'
+            }
+        ];
+
+        window.onload = function() {
+            // Load saved data if available
+            const savedData = localStorage.getItem('presensi_digital_data');
+            if (savedData) {
+                try {
+                    attendanceList = JSON.parse(savedData);
+                } catch (e) {
+                    console.error("Gagal membaca LocalStorage", e);
+                }
+            }
+            
+            startLiveClock();
+            updateAdminBadge();
+            renderAdminData();
+        };
+
+        function saveDataToStorage() {
+            localStorage.setItem('presensi_digital_data', JSON.stringify(attendanceList));
+            updateAdminBadge();
+        }
+
+        function startLiveClock() {
+            function updateClock() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const clockElem = document.getElementById('clockTime');
+                if (clockElem) clockElem.innerText = `${hours}:${minutes}:${seconds} WIB`;
+                
+                const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+                const dateElem = document.getElementById('clockDate');
+                if (dateElem) dateElem.innerText = now.toLocaleDateString('id-ID', options);
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            const btnPeserta = document.getElementById('btnRolePeserta');
+            const btnAdmin = document.getElementById('btnRoleAdmin');
+            const secPeserta = document.getElementById('pesertaSection');
+            const secAdmin = document.getElementById('adminSection');
+
+            if (role === 'peserta') {
+                btnPeserta.className = "px-3 py-1.5 rounded-lg transition-all duration-200 bg-white text-sky-700 shadow-sm flex items-center gap-1.5";
+                btnAdmin.className = "px-3 py-1.5 rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
+                secPeserta.classList.remove('hidden');
+                secAdmin.classList.add('hidden');
+            } else {
+                btnAdmin.className = "px-3 py-1.5 rounded-lg transition-all duration-200 bg-white text-sky-700 shadow-sm flex items-center gap-1.5";
+                btnPeserta.className = "px-3 py-1.5 rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
+                secAdmin.classList.remove('hidden');
+                secPeserta.classList.add('hidden');
+                renderAdminData();
+            }
+        }
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                showAlertModal("Ukuran File Terlalu Besar", "Maksimal ukuran foto adalah 5MB.", "warning");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentPhotoBase64 = e.target.result;
+                document.getElementById('imagePreview').src = currentPhotoBase64;
+                document.getElementById('uploadPrompt').classList.add('hidden');
+                document.getElementById('previewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(event) {
+            if (event) event.stopPropagation();
+            currentPhotoBase64 = null;
+            document.getElementById('inputFoto').value = '';
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('uploadPrompt').classList.remove('hidden');
+        }
+
+        // Webcam Live Feed Capture
+        async function startWebcam() {
+            const modal = document.getElementById('webcamModal');
+            const video = document.getElementById('webcamVideo');
+            modal.classList.remove('hidden');
+
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                video.srcObject = webcamStream;
+            } catch (err) {
+                closeWebcam();
+                showAlertModal("Kamera Tidak Dapat Diakses", "Pastikan Anda memberikan izin akses kamera pada peramban.", "error");
+            }
+        }
+
+        function closeWebcam() {
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+            }
+            document.getElementById('webcamModal').classList.add('hidden');
+        }
+
+        function captureWebcam() {
+            const video = document.getElementById('webcamVideo');
+            const canvas = document.getElementById('webcamCanvas');
+            const context = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            currentPhotoBase64 = canvas.toDataURL('image/jpeg');
+            document.getElementById('imagePreview').src = currentPhotoBase64;
+            document.getElementById('uploadPrompt').classList.add('hidden');
+            document.getElementById('previewContainer').classList.remove('hidden');
+
+            closeWebcam();
+        }
+
+        function handleAttendanceSubmit(e) {
+            e.preventDefault();
+
+            if (!currentPhotoBase64) {
+                showAlertModal("Foto Diperlukan", "Harap unggah foto atau ambil foto selfie sebagai bukti kehadiran.", "warning");
+                return;
+            }
+
+            const nama = document.getElementById('inputNama').value.trim();
+            const nip = document.getElementById('inputNip').value.trim();
+            const divisi = document.getElementById('inputDivisi').value.trim() || 'Umum';
+            const status = document.getElementById('inputStatus').value;
+            const catatan = document.getElementById('inputCatatan').value.trim() || '-';
+
+            const now = new Date();
+            const options = { day: '2-digit', month: 'short', year: 'numeric' };
+            const timeStr = `${now.toLocaleDateString('id-ID', options)}, ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} WIB`;
+
+            const newRecord = {
+                id: 'PRE-' + Math.floor(1000 + Math.random() * 9000),
+                nama: nama,
+                nip: nip,
+                divisi: divisi,
+                status: status,
+                waktu: timeStr,
+                foto: currentPhotoBase64,
+                catatan: catatan
+            };
+
+            // Insert to front of list
+            attendanceList.unshift(newRecord);
+            saveDataToStorage();
+
+            // Reset Form
+            document.getElementById('attendanceForm').reset();
+            removeImage(null);
+
+            // Show Success Alert
+            showAlertModal(
+                "Presensi Berhasil Terkirim!",
+                `Terima kasih, ${nama}. Data kehadiran Anda telah disimpan ke sistem admin.`,
+                "success"
+            );
+        }
+
+        function updateAdminBadge() {
+            const badge = document.getElementById('badgeAdminCount');
+            if (badge) badge.innerText = attendanceList.length;
+        }
+
+        function setFilterStatus(status) {
+            currentFilterStatus = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200";
+            });
+
+            if (status === 'All') document.getElementById('filterBtnAll').className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow-sm";
+            if (status === 'Hadir') document.getElementById('filterBtnHadir').className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow-sm";
+            if (status === 'Izin') document.getElementById('filterBtnIzin').className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow-sm";
+
+            renderAdminData();
+        }
+
+        function switchViewMode(mode) {
+            currentViewMode = mode;
+            const btnGrid = document.getElementById('btnViewGrid');
+            const btnTable = document.getElementById('btnViewTable');
+            const gridCont = document.getElementById('gridContainer');
+            const tableCont = document.getElementById('tableContainer');
+
+            if (mode === 'grid') {
+                btnGrid.className = "p-1.5 rounded-md bg-white text-sky-600 shadow-sm";
+                btnTable.className = "p-1.5 rounded-md text-slate-500 hover:text-slate-800";
+                gridCont.classList.remove('hidden');
+                tableCont.classList.add('hidden');
+            } else {
+                btnTable.className = "p-1.5 rounded-md bg-white text-sky-600 shadow-sm";
+                btnGrid.className = "p-1.5 rounded-md text-slate-500 hover:text-slate-800";
+                tableCont.classList.remove('hidden');
+                gridCont.classList.add('hidden');
+            }
+        }
+
+        function renderAdminData() {
+            const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
+            const gridContainer = document.getElementById('gridContainer');
+            const tableBody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            // Statistics Update
+            const total = attendanceList.length;
+            const totalHadir = attendanceList.filter(item => item.status === 'Hadir' || item.status === 'Dinas Luar').length;
+            const totalIzin = attendanceList.filter(item => item.status === 'Izin' || item.status === 'Sakit').length;
+            const totalFoto = attendanceList.filter(item => item.foto).length;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statHadir').innerText = totalHadir;
+            document.getElementById('statIzin').innerText = totalIzin;
+            document.getElementById('statFoto').innerText = totalFoto;
+            document.getElementById('totalRecordsText').innerText = `Total ${total} Data Kehadiran`;
+
+            // Filtering
+            const filteredData = attendanceList.filter(item => {
+                const matchesSearch = item.nama.toLowerCase().includes(searchKeyword) ||
+                                      item.nip.toLowerCase().includes(searchKeyword) ||
+                                      item.divisi.toLowerCase().includes(searchKeyword);
+                
+                let matchesStatus = true;
+                if (currentFilterStatus === 'Hadir') matchesStatus = (item.status === 'Hadir' || item.status === 'Dinas Luar');
+                if (currentFilterStatus === 'Izin') matchesStatus = (item.status === 'Izin' || item.status === 'Sakit');
+
+                return matchesSearch && matchesStatus;
+            });
+
+            if (filteredData.length === 0) {
+                gridContainer.innerHTML = '';
+                tableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            // Render Grid View
+            gridContainer.innerHTML = filteredData.map(item => {
+                const badgeColor = item.status === 'Hadir' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                   item.status === 'Dinas Luar' ? 'bg-sky-100 text-sky-700 border-sky-200' :
+                                   'bg-amber-100 text-amber-700 border-amber-200';
+                
+                return `
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow group flex flex-col justify-between">
+                        <div>
+                            <!-- Photo Header -->
+                            <div class="relative h-48 bg-slate-100 overflow-hidden cursor-pointer" onclick="openPhotoModal('${item.foto}', '${item.nama}', '${item.status} - ${item.waktu}', '${item.catatan}')">
+                                <img src="${item.foto}" alt="${item.nama}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://placehold.co/400x300/e2e8f0/64748b?text=Tidak+Ada+Foto'">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80"></div>
+                                <span class="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full border shadow-sm ${badgeColor}">
+                                    ${item.status}
+                                </span>
+                                <div class="absolute bottom-3 left-3 right-3 text-white">
+                                    <p class="font-bold text-sm leading-tight drop-shadow-sm">${item.nama}</p>
+                                    <p class="text-[11px] text-slate-200">${item.nip} • ${item.divisi}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Card Body -->
+                            <div class="p-4 space-y-2 text-xs">
+                                <div class="flex items-center text-slate-500 gap-1.5">
+                                    <i class="fa-regular fa-clock text-sky-600"></i>
+                                    <span>${item.waktu}</span>
+                                </div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600 italic">
+                                    "${item.catatan}"
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="text-slate-400 font-mono text-[10px]">${item.id}</span>
+                            <div class="flex gap-2">
+                                <button onclick="openPhotoModal('${item.foto}', '${item.nama}', '${item.status} - ${item.waktu}', '${item.catatan}')" class="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold rounded-lg text-[11px] flex items-center gap-1">
+                                    <i class="fa-solid fa-expand"></i> Foto
+                                </button>
+                                <button onclick="deleteRecord('${item.id}')" title="Hapus" class="px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-lg">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Render Table View
+            tableBody.innerHTML = filteredData.map(item => {
+                const badgeColor = item.status === 'Hadir' ? 'bg-emerald-100 text-emerald-700' :
+                                   item.status === 'Dinas Luar' ? 'bg-sky-100 text-sky-700' :
+                                   'bg-amber-100 text-amber-700';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2">
+                            <img src="${item.foto}" class="w-8 h-8 rounded-full object-cover border border-slate-200 cursor-pointer" onclick="openPhotoModal('${item.foto}', '${item.nama}', '${item.status} - ${item.waktu}', '${item.catatan}')">
+                            <div>
+                                <p class="font-bold">${item.nama}</p>
+                                <p class="text-[10px] text-slate-400 font-mono">${item.id}</p>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-slate-600">${item.nip}</td>
+                        <td class="px-4 py-3 text-slate-600">${item.divisi}</td>
+                        <td class="px-4 py-3 text-slate-600">${item.waktu}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick="openPhotoModal('${item.foto}', '${item.nama}', '${item.status} - ${item.waktu}', '${item.catatan}')" class="text-sky-600 hover:underline font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-image"></i> Lihat Foto
+                            </button>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="deleteRecord('${item.id}')" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openPhotoModal(fotoUrl, nama, sub, catatan) {
+            document.getElementById('modalPhotoImage').src = fotoUrl;
+            document.getElementById('modalPhotoTitle').innerText = `Foto Kehadiran: ${nama}`;
+            document.getElementById('modalPhotoSub').innerText = sub;
+            document.getElementById('modalPhotoNotes').innerText = catatan ? `Catatan: "${catatan}"` : '';
+            document.getElementById('photoModal').classList.remove('hidden');
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photoModal').classList.add('hidden');
+        }
+
+        function deleteRecord(id) {
+            attendanceList = attendanceList.filter(item => item.id !== id);
+            saveDataToStorage();
+            renderAdminData();
+        }
+
+        function clearAllDataConfirm() {
+            if (attendanceList.length === 0) {
+                showAlertModal("Data Kosong", "Tidak ada data kehadiran yang tersimpan.", "info");
+                return;
+            }
+            
+            attendanceList = [];
+            saveDataToStorage();
+            renderAdminData();
+                showAlertModal("Data Dibersihkan", "Seluruh data presensi telah berhasil dihapus.", "success");
+        }
+
+        function exportToCSV() {
+            if (attendanceList.length === 0) {
+                showAlertModal("Gagal Ekspor", "Tidak ada data kehadiran untuk diekspor.", "warning");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,ID,Nama,NIP,Divisi,Status,Waktu,Catatan\n";
+            attendanceList.forEach(row => {
+                const cleanCatatan = (row.catatan || '').replace(/"/g, '""');
+                csvContent += `"${row.id}","${row.nama}","${row.nip}","${row.divisi}","${row.status}","${row.waktu}","${cleanCatatan}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Data_Presensi_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function showAlertModal(title, message, type) {
+            const modal = document.getElementById('alertModal');
+            const icon = document.getElementById('alertIcon');
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+
+            if (type === 'warning' || type === 'error') {
+                icon.className = "w-14 h-14 mx-auto rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mb-4";
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else if (type === 'info') {
+                icon.className = "w-14 h-14 mx-auto rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-2xl mb-4";
+                icon.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            } else {
+                icon.className = "w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-4";
+                icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
